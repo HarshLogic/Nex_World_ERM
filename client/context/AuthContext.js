@@ -95,6 +95,9 @@ export function AuthProvider({ children }) {
         setUser(loggedUser);
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('erp_demo_user', JSON.stringify(loggedUser));
+          if (res.data.token) {
+            window.localStorage.setItem('erp_token', res.data.token);
+          }
         }
         showToast(`Welcome back, ${loggedUser.name}!`, 'success');
         router.push(loggedUser.role === 'ADMIN' ? '/dashboard' : '/pos');
@@ -114,6 +117,7 @@ export function AuthProvider({ children }) {
 
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('erp_demo_user');
+      window.localStorage.removeItem('erp_token');
     }
 
     setUser(null);

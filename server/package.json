@@ -5,10 +5,11 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
+    "build": "npx prisma generate",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "prisma:generate": "npx prisma generate",
-    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:migrate": "npx prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
     "test": "node --test ../tests/unit/*.test.js"
   },

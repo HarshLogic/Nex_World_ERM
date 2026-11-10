@@ -617,9 +617,12 @@ function handleDemoApi(endpoint, method, body) {
 async function fetchClient(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('erp_token') : null;
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const config = {

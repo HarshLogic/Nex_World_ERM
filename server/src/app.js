@@ -11,10 +11,30 @@ const { sendError } = require('./utils/response.util');
 const app = express();
 
 // Security and standard middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      const configuredOrigins = process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+        : ['http://localhost:3000'];
+
+      if (
+        process.env.CORS_ORIGIN === '*' ||
+        configuredOrigins.includes(origin) ||
+        origin.endsWith('.railway.app') ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
