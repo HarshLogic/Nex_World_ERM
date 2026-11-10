@@ -1,0 +1,35 @@
+{
+  "name": "records-manager-erp",
+  "version": "1.0.0",
+  "description": "Production-Ready Records Manager ERP, Inventory Management & POS System",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "server:dev": "npm --prefix server run dev",
+    "server:start": "npm --prefix server start",
+    "client:dev": "npm --prefix client run dev",
+    "client:build": "npm --prefix client run build",
+    "client:start": "npm --prefix client start",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:concurrency": "node --test tests/concurrency/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "test": "node --test tests/unit/*.test.js tests/concurrency/*.test.js tests/integration/*.test.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "keywords": [
+    "erp",
+    "pos",
+    "inventory",
+    "clean-architecture",
+    "solid",
+    "acid-transactions"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "UNLICENSED"
+}
+

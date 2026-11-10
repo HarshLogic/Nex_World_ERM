@@ -1,0 +1,60 @@
+const authService = require('./auth.service');
+const env = require('../../config/env');
+const { sendSuccess, sendError } = require('../../utils/response.util');
+
+class AuthController {
+  async login(req, res, next) {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return sendError(res, 'Email and password are required', 400, 'VALIDATION_ERROR');
+      }
+
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+
+      const result = await authService.login(email, password, ipAddress, userAgent);
+
+      // Set HTTP-only secure cookie
+      res.cookie(env.COOKIE_NAME, result.token, {
+        httpOnly: true,
+        secure: env.COOKIE_SECURE,
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      return sendSuccess(res, result, 'Login successful');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async logout(req, res, next) {
+    try {
+      const token = req.cookies[env.COOKIE_NAME] || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
+      await authService.logout(token);
+
+      res.clearCookie(env.COOKIE_NAME, {
+        httpOnly: true,
+        secure: env.COOKIE_SECURE,
+        sameSite: 'lax',
+      });
+
+      return sendSuccess(res, null, 'Logged out successfully');
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async me(req, res, next) {
+    try {
+      const user = await authService.getCurrentUser(req.user.id);
+      return sendSuccess(res, user, 'Profile retrieved');
+    } catch (err) {
+      next(err);
+    }
+  }
+}
+
+module.exports = new AuthController();
+
