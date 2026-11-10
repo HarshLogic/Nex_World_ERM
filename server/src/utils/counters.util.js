@@ -4,13 +4,15 @@
  */
 
 /**
- * Formats a prefix and integer number into a zero-padded 5-digit sequence code.
- * @param {string} prefix - e.g. "INV-" or "SKU-"
+ * Formats a prefix and integer number into a zero-padded sequence code.
+ * @param {string} prefix - e.g. "INV-", "SKU-", or "PERF-"
  * @param {number|bigint} number - e.g. 1
- * @returns {string} e.g. "INV-00001"
+ * @param {number} [digits] - Zero-pad length (defaults to 6 for PERF-, 5 for others)
+ * @returns {string} e.g. "PERF-000001" or "INV-00001"
  */
-function formatSequenceCode(prefix, number) {
-  const numStr = String(number).padStart(5, '0');
+function formatSequenceCode(prefix, number, digits = null) {
+  const padLength = digits !== null ? digits : (prefix.startsWith('PERF') ? 6 : 5);
+  const numStr = String(number).padStart(padLength, '0');
   return `${prefix}${numStr}`;
 }
 
@@ -41,10 +43,10 @@ async function getNextInvoiceNumber(tx, prefix = 'INV-') {
 /**
  * Atomically increments and retrieves the next sequential SKU within a Prisma transaction.
  * @param {Object} tx - Active Prisma transaction client ($prisma.$transaction)
- * @param {string} [prefix="SKU-"]
- * @returns {Promise<string>} Next SKU code, e.g. "SKU-00001"
+ * @param {string} [prefix="PERF-"]
+ * @returns {Promise<string>} Next SKU code, e.g. "PERF-000001"
  */
-async function getNextSkuNumber(tx, prefix = 'SKU-') {
+async function getNextSkuNumber(tx, prefix = 'PERF-') {
   const counter = await tx.productSkuCounter.upsert({
     where: { prefix },
     update: {

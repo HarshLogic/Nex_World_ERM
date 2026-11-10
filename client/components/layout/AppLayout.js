@@ -20,19 +20,31 @@ import {
   Activity,
   Info,
   Menu,
+  X,
   Bell,
   LogOut,
   ChevronRight,
   Check,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AppLayout({ children }) {
   const { user, isAdmin, logout } = useAuth();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Desktop sidebar collapse state
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  // Mobile drawer open state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileDrawerOpen(false);
+  }, [pathname]);
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -64,22 +76,20 @@ export default function AppLayout({ children }) {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, adminOnly: true },
     { label: 'QR Sales / POS', href: '/pos', icon: ScanLine, adminOnly: false },
-    { label: 'Products', href: '/products', icon: Package, adminOnly: false },
+    { label: 'Perfumes & Products', href: '/products', icon: Package, adminOnly: false },
     { label: 'Stock In / Out', href: '/inventory', icon: ArrowLeftRight, adminOnly: false },
     { label: 'Sales History', href: '/sales', icon: History, adminOnly: false },
     { label: 'Customers', href: '/customers', icon: Users, adminOnly: false },
     { label: 'Suppliers', href: '/suppliers', icon: Truck, adminOnly: true },
     { label: 'Purchase Orders', href: '/purchases', icon: FileSpreadsheet, adminOnly: true },
     { label: 'Expenses', href: '/expenses', icon: Receipt, adminOnly: true },
-    { label: 'Users', href: '/users', icon: UserCog, adminOnly: true },
+    { label: 'Employees & Users', href: '/users', icon: UserCog, adminOnly: true },
     { label: 'Settings', href: '/settings', icon: Settings, adminOnly: true },
     { label: 'Activity Logs', href: '/activity-logs', icon: Activity, adminOnly: true },
     { label: 'About App', href: '/about', icon: Info, adminOnly: false },
   ];
 
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
-
-  // Get current breadcrumb label
   const currentItem = navItems.find((item) => pathname.startsWith(item.href)) || { label: 'Overview' };
 
   if (!user && pathname === '/login') {
@@ -87,65 +97,91 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      {/* Sidebar */}
+    <div className="min-h-screen flex bg-slate-100 text-slate-800">
+      {/* Mobile Drawer Backdrop Overlay */}
+      {mobileDrawerOpen && (
+        <div
+          onClick={() => setMobileDrawerOpen(false)}
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden transition-opacity"
+        />
+      )}
+
+      {/* Sidebar (Desktop Persistent + Mobile Slide-over Drawer) */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 z-30 fixed inset-y-0 left-0 shadow-xl`}
+        className={`fixed inset-y-0 left-0 z-50 bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 shadow-2xl
+          ${mobileDrawerOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0'}
+          ${desktopCollapsed ? 'lg:w-20' : 'lg:w-64'}
+        `}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
-          <Link href={isAdmin ? '/dashboard' : '/pos'} className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-md">
-              RM
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 bg-slate-950/40">
+          <Link
+            href={isAdmin ? '/dashboard' : '/pos'}
+            className="flex items-center space-x-3 overflow-hidden group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-slate-950 font-black text-xl flex-shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            {sidebarOpen && (
+            {(!desktopCollapsed || mobileDrawerOpen) && (
               <div className="flex flex-col truncate">
-                <span className="font-semibold text-white text-sm tracking-wide">Records Manager</span>
-                <span className="text-xs text-slate-400">ERP + POS Retail</span>
+                <span className="font-bold text-white text-sm tracking-tight flex items-center space-x-1.5">
+                  <span>Royal Oud</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-semibold border border-amber-500/30">
+                    ERP
+                  </span>
+                </span>
+                <span className="text-[11px] text-slate-400 truncate">Perfume POS & Inventory</span>
               </div>
             )}
           </Link>
+
+          {/* Close button for mobile */}
+          <button
+            onClick={() => setMobileDrawerOpen(false)}
+            className="p-1.5 text-slate-400 hover:text-white lg:hidden rounded-lg hover:bg-slate-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar">
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+            const isCollapsed = desktopCollapsed && !mobileDrawerOpen;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
-                    ? 'bg-primary-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
                 }`}
-                title={!sidebarOpen ? item.label : undefined}
+                title={isCollapsed ? item.label : undefined}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                {sidebarOpen && <span className="truncate">{item.label}</span>}
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
         {/* User Profile Footer */}
-        <div className="p-3 border-t border-slate-800">
+        <div className="p-3 border-t border-slate-800 bg-slate-950/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-white font-semibold flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold flex-shrink-0">
                 {user?.name ? user.name[0].toUpperCase() : 'U'}
               </div>
-              {sidebarOpen && (
+              {(!desktopCollapsed || mobileDrawerOpen) && (
                 <div className="truncate">
                   <p className="text-xs font-semibold text-white truncate">{user?.name}</p>
                   <span
-                    className={`inline-block px-1.5 py-0.5 text-[10px] rounded font-bold uppercase ${
-                      isAdmin ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
+                    className={`inline-block px-1.5 py-0.5 text-[9px] rounded font-bold uppercase tracking-wider ${
+                      isAdmin ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-blue-500/20 text-blue-400'
                     }`}
                   >
                     {user?.role}
@@ -153,11 +189,11 @@ export default function AppLayout({ children }) {
                 </div>
               )}
             </div>
-            {sidebarOpen && (
+            {(!desktopCollapsed || mobileDrawerOpen) && (
               <button
                 onClick={logout}
                 title="Logout"
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -166,36 +202,53 @@ export default function AppLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      {/* Main Layout Area - Automatically takes full width on mobile/tablet */}
+      <div
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          desktopCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+        } ml-0`}
+      >
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm no-print">
-          {/* Left: Sidebar Toggle & Breadcrumbs */}
-          <div className="flex items-center space-x-4">
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-sm no-print">
+          {/* Left: Mobile Drawer Toggle & Desktop Sidebar Toggle & Breadcrumbs */}
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Mobile Hamburger Toggle */}
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+              onClick={() => setMobileDrawerOpen(true)}
+              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors lg:hidden focus:outline-none"
+              aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-2 text-sm text-slate-500 font-medium">
-              <span>ERP</span>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-              <span className="text-slate-900 font-semibold">{currentItem.label}</span>
+
+            {/* Desktop Collapse Toggle */}
+            <button
+              onClick={() => setDesktopCollapsed(!desktopCollapsed)}
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors hidden lg:block focus:outline-none"
+              aria-label="Toggle sidebar width"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Breadcrumb Display */}
+            <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-500 font-medium truncate">
+              <span className="hidden sm:inline">Perfume ERP</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 hidden sm:inline" />
+              <span className="text-slate-900 font-bold truncate">{currentItem.label}</span>
             </div>
           </div>
 
-          {/* Right: Notifications & User profile */}
-          <div className="flex items-center space-x-4">
+          {/* Right: Notifications & Quick Role Status */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Notification Bell */}
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none"
+                className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -203,29 +256,29 @@ export default function AppLayout({ children }) {
 
               {/* Notification Dropdown Panel */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                    <span className="font-semibold text-xs text-slate-700 uppercase tracking-wider">
-                      Notifications ({unreadCount})
+                    <span className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                      Alerts & Notifications ({unreadCount})
                     </span>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllRead}
-                        className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+                        className="text-xs text-primary-600 hover:text-primary-700 font-semibold flex items-center space-x-1"
                       >
                         <Check className="w-3 h-3" />
-                        <span>Mark all read</span>
+                        <span>Clear all</span>
                       </button>
                     )}
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
                     {notifications.length === 0 ? (
-                      <p className="p-4 text-center text-xs text-slate-400">No recent notifications</p>
+                      <p className="p-4 text-center text-xs text-slate-400">No unread notifications</p>
                     ) : (
                       notifications.map((n) => (
-                        <div key={n.id} className={`p-3 text-xs ${n.isRead ? 'bg-white' : 'bg-primary-50/50'}`}>
-                          <p className="font-semibold text-slate-800">{n.title}</p>
-                          <p className="text-slate-600 mt-0.5">{n.message}</p>
+                        <div key={n.id} className={`p-3 text-xs ${n.isRead ? 'bg-white' : 'bg-amber-50/40'}`}>
+                          <p className="font-semibold text-slate-900">{n.title}</p>
+                          <p className="text-slate-600 mt-0.5 text-[11px] leading-relaxed">{n.message}</p>
                           <span className="text-[10px] text-slate-400 mt-1 block">
                             {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -237,12 +290,12 @@ export default function AppLayout({ children }) {
               )}
             </div>
 
-            {/* User Pill */}
-            <div className="flex items-center space-x-2 border-l border-slate-200 pl-4">
-              <span className="text-xs font-medium text-slate-700 hidden sm:inline">{user?.name}</span>
+            {/* Quick User Badge */}
+            <div className="flex items-center space-x-2 border-l border-slate-200 pl-3 sm:pl-4">
+              <span className="text-xs font-semibold text-slate-800 hidden md:inline">{user?.name}</span>
               <span
                 className={`px-2 py-0.5 text-[10px] rounded-full font-bold uppercase tracking-wider ${
-                  isAdmin ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                  isAdmin ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-blue-100 text-blue-900'
                 }`}
               >
                 {user?.role}
@@ -251,10 +304,9 @@ export default function AppLayout({ children }) {
           </div>
         </header>
 
-        {/* Page Content Viewport */}
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        {/* Page Content Viewport - Uses full width with responsive padding */}
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 overflow-y-auto min-w-0">{children}</main>
       </div>
     </div>
   );
 }
-

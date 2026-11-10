@@ -129,14 +129,23 @@ function handleDemoApi(endpoint, method, body) {
   if (cleanPath === '/products') {
     let products = getStored('products', INITIAL_PRODUCTS);
     if (method === 'POST') {
-      const newSku = `SKU-${String(products.length + 1).padStart(5, '0')}`;
+      const newSku = `PERF-${String(products.length + 1).padStart(6, '0')}`;
       const newProd = {
         id: `prod-${Date.now()}`,
         name: body.name,
         sku: newSku,
         barcode: body.barcode || String(Date.now()).slice(-12),
+        qrCode: newSku,
         categoryId: body.categoryId,
-        category: getStored('categories', INITIAL_CATEGORIES).find((c) => c.id === body.categoryId) || { name: 'General' },
+        category: getStored('categories', INITIAL_CATEGORIES).find((c) => c.id === body.categoryId) || { name: 'Perfume' },
+        brand: body.brand || 'House Blend',
+        perfumeType: body.perfumeType || 'Spray',
+        fragranceName: body.fragranceName || 'Fragrance Notes',
+        sizeVolume: body.sizeVolume || '100ml',
+        concentration: body.concentration || 'Eau de Parfum (EDP)',
+        gender: body.gender || 'Unisex',
+        imageUrl: body.imageUrl || null,
+        description: body.description || '',
         sellingPrice: Number(body.sellingPrice),
         baseCost: Number(body.baseCost),
         taxRate: Number(body.taxRate || 5.0),
@@ -243,7 +252,17 @@ function handleDemoApi(endpoint, method, body) {
 
     setStored('products', products);
 
+    const isCredit = body.payment?.method === 'CREDIT';
     const customer = customers.find((c) => c.id === body.customerId) || { name: 'Walk-in Customer' };
+    
+    // Update customer outstanding balance if credit sale
+    if (isCredit && body.customerId) {
+      const updatedCustomers = customers.map((c) =>
+        c.id === body.customerId ? { ...c, balance: Number(c.balance || 0) + grandTotal } : c
+      );
+      setStored('customers', updatedCustomers);
+    }
+
     const tendered = Number(body.payment?.amountTendered || grandTotal);
     const changeDue = body.payment?.method === 'CASH' ? Math.max(0, tendered - grandTotal) : 0;
 
@@ -255,8 +274,8 @@ function handleDemoApi(endpoint, method, body) {
       subtotal: grandTotal,
       totalDiscount: body.transactionDiscount?.value || 0,
       grandTotal,
-      grossProfit: Math.round(grandTotal * 0.35 * 100) / 100,
-      paymentStatus: 'PAID',
+      grossProfit: Math.round(grandTotal * 0.42 * 100) / 100,
+      paymentStatus: isCredit ? 'UNPAID' : 'PAID',
       payments: [{ paymentMethod: body.payment?.method || 'CASH', amount: grandTotal }],
       items,
       createdAt: new Date().toISOString(),
@@ -266,23 +285,24 @@ function handleDemoApi(endpoint, method, body) {
     setStored('sales', [newSale, ...sales]);
 
     const receipt = {
-      businessName: settings.businessName,
-      address: settings.address,
-      phone: settings.phone,
+      businessName: settings.businessName || 'Royal Oud & Perfumes LLC',
+      address: settings.address || 'Shop 12, Gold Souk, Deira, Dubai',
+      phone: settings.phone || '+971 4 399 8888',
+      taxNumber: settings.taxNumber || '100234567800003',
       invoiceNumber: invNum,
       date: newSale.createdAt,
-      cashier: 'Demo Cashier',
+      cashier: 'Jane Cashier',
       customer: customer.name,
       items,
       subtotal: grandTotal,
-      totalDiscount: 0,
+      totalDiscount: body.transactionDiscount?.value || 0,
       taxTotal: Math.round(grandTotal * 0.05 * 100) / 100,
       grandTotal,
       paymentMethod: body.payment?.method || 'CASH',
       amountTendered: tendered,
       changeDue,
-      header: settings.receiptHeader,
-      footer: settings.receiptFooter,
+      header: settings.receiptHeader || 'Royal Oud & Perfumes — Luxury Fragrances Dubai',
+      footer: settings.receiptFooter || 'Perfumes and oils once opened cannot be exchanged or refunded.',
     };
 
     return {
@@ -476,6 +496,10 @@ function handleDemoApi(endpoint, method, body) {
   // Purchase Orders
   if (cleanPath === '/purchase-orders') {
     let poList = getStored('purchase_orders', INITIAL_PURCHASE_ORDERS);
+    poList = poList.map((po) => ({
+      ...po,
+      _count: po._count || { items: po.items?.length || 0 },
+    }));
     if (method === 'POST') {
       const suppliers = getStored('suppliers', INITIAL_SUPPLIERS);
       const supplier = suppliers.find((s) => s.id === body.supplierId) || { name: 'Vendor' };

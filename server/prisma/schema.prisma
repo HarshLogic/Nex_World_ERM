@@ -53,6 +53,8 @@ enum PurchaseOrderStatus {
 enum PaymentMethod {
   CASH
   CARD
+  WALLET
+  BANK_TRANSFER
   CREDIT
   OTHER
 }
@@ -116,6 +118,7 @@ model Category {
   id          String    @id @default(uuid())
   name        String    @unique
   description String?
+  status      String    @default("ACTIVE")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -129,6 +132,14 @@ model Product {
   barcode             String?       @unique
   qrCode              String?
   categoryId          String
+  brand               String?
+  perfumeType         String?
+  fragranceName       String?
+  sizeVolume          String?
+  concentration       String?
+  gender              String?
+  imageUrl            String?
+  supplierId          String?
   description         String?
   sellingPrice        Decimal       @db.Decimal(12, 2)
   baseCost            Decimal       @db.Decimal(12, 2)
@@ -140,6 +151,7 @@ model Product {
   updatedAt           DateTime      @updatedAt
 
   category           Category            @relation(fields: [categoryId], references: [id])
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
   inventoryLedgers   InventoryLedger[]
   saleItems          SaleItem[]
   purchaseOrderItems PurchaseOrderItem[]
@@ -149,6 +161,7 @@ model Product {
   @@index([sku])
   @@index([barcode])
   @@index([categoryId])
+  @@index([brand])
 }
 
 model ProductSkuCounter {
@@ -241,6 +254,7 @@ model Supplier {
 
   purchaseOrders  PurchaseOrder[]
   supplierLedgers SupplierLedger[]
+  products        Product[]
 }
 
 model SupplierLedger {
@@ -490,19 +504,31 @@ model Expense {
 
 model BusinessSettings {
   id                       String   @id @default(uuid())
-  businessName             String   @default("Records Manager Retail")
-  phone                    String?  @default("+971 4 000 0000")
-  email                    String?  @default("info@recordsmanager.ae")
+  businessName             String   @default("Royal Oud & Perfumes LLC")
+  phone                    String?  @default("+971 4 399 8888")
+  email                    String?  @default("sales@royaloudperfumes.ae")
   logoUrl                  String?
-  address                  String?  @default("Dubai, United Arab Emirates")
+  address                  String?  @default("Shop 12, Gold & Diamond Souk, Deira, Dubai, UAE")
+  website                  String?  @default("https://royaloudperfumes.ae")
+  taxNumber                String?  @default("100234567800003")
   currencyCode             String   @default("AED")
   currencySymbol           String   @default("AED")
   defaultTaxRate           Decimal  @default(5.00) @db.Decimal(5, 2)
   pricesIncludeTax         Boolean  @default(true)
   defaultLowStockThreshold Int      @default(5)
   invoicePrefix            String   @default("INV-")
-  receiptHeader            String?  @default("Thank you for shopping with us!")
-  receiptFooter            String?  @default("Goods once sold can be returned within 14 days with original receipt.")
+  invoiceFormat            String?  @default("PERF-SEQ")
+  receiptHeader            String?  @default("Royal Oud & Perfumes — Luxury Fragrances Dubai")
+  receiptFooter            String?  @default("Perfumes and oils once opened cannot be exchanged or refunded due to hygiene reasons.")
+  receiptNotes             String?  @default("100% Authentic French & Oriental Fragrances")
+  showTaxDetails           Boolean  @default(true)
+  showCustomerDetails      Boolean  @default(true)
+  allowNegativeInventory   Boolean  @default(false)
+  defaultPaymentMethod     String   @default("CASH")
+  allowPartialPayments     Boolean  @default(true)
+  allowCustomerCredit      Boolean  @default(true)
+  maxDiscountPercent       Decimal  @default(50.00) @db.Decimal(5, 2)
+  businessTimezone         String   @default("Asia/Dubai")
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 }

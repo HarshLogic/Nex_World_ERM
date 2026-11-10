@@ -15,11 +15,12 @@ class AuthController {
 
       const result = await authService.login(email, password, ipAddress, userAgent);
 
-      // Set HTTP-only secure cookie
+      // Set HTTP-only secure cookie (cross-site compatible for Railway/cloud deployments)
+      const isCrossSite = Boolean(env.COOKIE_SECURE);
       res.cookie(env.COOKIE_NAME, result.token, {
         httpOnly: true,
         secure: env.COOKIE_SECURE,
-        sameSite: 'lax',
+        sameSite: isCrossSite ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -34,10 +35,11 @@ class AuthController {
       const token = req.cookies[env.COOKIE_NAME] || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
       await authService.logout(token);
 
+      const isCrossSite = Boolean(env.COOKIE_SECURE);
       res.clearCookie(env.COOKIE_NAME, {
         httpOnly: true,
         secure: env.COOKIE_SECURE,
-        sameSite: 'lax',
+        sameSite: isCrossSite ? 'none' : 'lax',
       });
 
       return sendSuccess(res, null, 'Logged out successfully');

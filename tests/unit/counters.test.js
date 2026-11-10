@@ -15,6 +15,12 @@ describe('Unit Tests: Atomic Sequence Counter Formatting', () => {
     assert.strictEqual(formatSequenceCode('SKU-', 25), 'SKU-00025');
   });
 
+  test('Formats sequential Perfume SKUs zero-padded to 6 digits (PERF-000001)', () => {
+    assert.strictEqual(formatSequenceCode('PERF-', 1), 'PERF-000001');
+    assert.strictEqual(formatSequenceCode('PERF-', 42), 'PERF-000042');
+    assert.strictEqual(formatSequenceCode('PERF-', 999), 'PERF-000999');
+  });
+
   test('Supports BigInt inputs from PostgreSQL BIGINT columns', () => {
     assert.strictEqual(formatSequenceCode('INV-', 7n), 'INV-00007');
     assert.strictEqual(formatSequenceCode('SKU-', 100n), 'SKU-00100');

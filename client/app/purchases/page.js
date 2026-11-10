@@ -87,7 +87,7 @@ export default function PurchasesPage() {
     // Auto fill default base cost if product selected
     if (field === 'productId') {
       const prod = products.find((p) => p.id === value);
-      if (prod) {
+      if (prod && prod.baseCost !== undefined && prod.baseCost !== null) {
         copy[index].unitCost = prod.baseCost.toString();
       }
     }
@@ -200,11 +200,11 @@ export default function PurchasesPage() {
                     <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
                       {new Date(po.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-slate-900">{po.supplier?.name}</td>
-                    <td className="py-3 px-4 text-center font-bold text-slate-600">{po._count.items}</td>
-                    <td className="py-3 px-4 text-right font-medium text-slate-700">{po.subtotal} AED</td>
-                    <td className="py-3 px-4 text-right font-medium text-blue-600">+{po.landedCosts} AED</td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-900">{po.grandTotal} AED</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">{po.supplier?.name || 'Supplier'}</td>
+                    <td className="py-3 px-4 text-center font-bold text-slate-600">{po._count?.items ?? po.items?.length ?? 0}</td>
+                    <td className="py-3 px-4 text-right font-medium text-slate-700">{Number(po.subtotal || 0).toLocaleString()} AED</td>
+                    <td className="py-3 px-4 text-right font-medium text-blue-600">+{Number(po.landedCosts || 0).toLocaleString()} AED</td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-900">{Number(po.grandTotal || 0).toLocaleString()} AED</td>
                     <td className="py-3 px-4 text-center">
                       <span
                         className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${

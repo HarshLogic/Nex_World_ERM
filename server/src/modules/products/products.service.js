@@ -4,18 +4,21 @@ const { round2 } = require('../../utils/calculations.util');
 const { logActivity } = require('../../utils/audit.util');
 
 class ProductsService {
-  async listProducts({ search, categoryId, status, page = 1, limit = 20 }) {
+  async listProducts({ search, categoryId, brand, status, page = 1, limit = 20 }) {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
     const where = {};
     if (status) where.status = status;
     if (categoryId) where.categoryId = categoryId;
+    if (brand) where.brand = { contains: brand, mode: 'insensitive' };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { barcode: { contains: search, mode: 'insensitive' } },
+        { brand: { contains: search, mode: 'insensitive' } },
+        { fragranceName: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -109,6 +112,14 @@ class ProductsService {
           barcode: data.barcode || null,
           qrCode: data.qrCode || sku,
           categoryId: data.categoryId,
+          brand: data.brand || null,
+          perfumeType: data.perfumeType || null,
+          fragranceName: data.fragranceName || null,
+          sizeVolume: data.sizeVolume || null,
+          concentration: data.concentration || null,
+          gender: data.gender || null,
+          imageUrl: data.imageUrl || null,
+          supplierId: data.supplierId || null,
           description: data.description || null,
           sellingPrice: Number(data.sellingPrice || 0),
           baseCost: Number(data.baseCost || 0),
@@ -156,6 +167,14 @@ class ProductsService {
         barcode: data.barcode !== undefined ? data.barcode : undefined,
         qrCode: data.qrCode !== undefined ? data.qrCode : undefined,
         categoryId: data.categoryId,
+        brand: data.brand !== undefined ? data.brand : undefined,
+        perfumeType: data.perfumeType !== undefined ? data.perfumeType : undefined,
+        fragranceName: data.fragranceName !== undefined ? data.fragranceName : undefined,
+        sizeVolume: data.sizeVolume !== undefined ? data.sizeVolume : undefined,
+        concentration: data.concentration !== undefined ? data.concentration : undefined,
+        gender: data.gender !== undefined ? data.gender : undefined,
+        imageUrl: data.imageUrl !== undefined ? data.imageUrl : undefined,
+        supplierId: data.supplierId !== undefined ? data.supplierId : undefined,
         description: data.description,
         sellingPrice: data.sellingPrice !== undefined ? Number(data.sellingPrice) : undefined,
         baseCost: data.baseCost !== undefined ? Number(data.baseCost) : undefined,
