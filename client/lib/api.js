@@ -1,4 +1,18 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+function getApiBaseUrl() {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+  }
+
+  // Auto-detect production Railway backend when deployed
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.endsWith('.railway.app') || host === 'nexperfumeerp.up.railway.app') {
+      return 'https://erp-backend-production-c612ea0b.up.railway.app/api';
+    }
+  }
+
+  return 'http://localhost:5000/api';
+}
 
 /**
  * Standard Production API Client
@@ -6,7 +20,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
  */
 async function fetchClient(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = `${API_BASE}${cleanEndpoint}`;
+  const apiBase = getApiBaseUrl();
+  const url = `${apiBase}${cleanEndpoint}`;
 
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('erp_token') : null;
 
