@@ -15,23 +15,9 @@ export function AuthProvider({ children }) {
   const { showToast } = useToast();
 
   const checkAuth = useCallback(async () => {
-    // 1. Check if demo session is stored in localStorage
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem('erp_demo_user');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setUser(parsed);
-          setLoading(false);
-          return;
-        }
-      } catch (_) {}
-    }
-
-    // 2. Otherwise check active server session
     try {
       const res = await api.get('/auth/me');
-      if (res.success && res.data) {
+      if (res && res.success && res.data) {
         setUser(res.data);
       } else {
         setUser(null);
@@ -58,55 +44,33 @@ export function AuthProvider({ children }) {
     }
   }, [user, loading, pathname, router]);
 
-  // Instant Demo Login (Works 100% offline without database)
-  const demoLogin = (role = 'ADMIN') => {
-    const demoUser = {
-      id: role === 'ADMIN' ? 'demo-admin-id' : 'demo-cashier-id',
-      email: role === 'ADMIN' ? 'admin@recordsmanager.ae' : 'cashier@recordsmanager.ae',
-      name: role === 'ADMIN' ? 'Super Admin' : 'Jane Cashier',
-      role,
-    };
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('erp_demo_user', JSON.stringify(demoUser));
-    }
-
-    setUser(demoUser);
-    showToast(`Logged in as ${role === 'ADMIN' ? 'Super Admin' : 'Cashier'}!`, 'success');
-    router.push(role === 'ADMIN' ? '/dashboard' : '/pos');
-  };
-
   const login = async (email, password) => {
-    // Check if it's the standard demo credentials
-    const cleanEmail = (email || '').toLowerCase().trim();
-    if (cleanEmail === 'admin@recordsmanager.ae' || cleanEmail.includes('admin')) {
-      demoLogin('ADMIN');
-      return { success: true };
-    }
-    if (cleanEmail === 'cashier@recordsmanager.ae' || cleanEmail.includes('cashier')) {
-      demoLogin('USER');
-      return { success: true };
-    }
-
     try {
-      const res = await api.post('/auth/login', { email, password });
-      if (res.success && res.data) {
+      const res = await api.post('/auth/login', {
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (res && res.success && res.data) {
         const loggedUser = res.data.user;
         setUser(loggedUser);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('erp_demo_user', JSON.stringify(loggedUser));
-          if (res.data.token) {
-            window.localStorage.setItem('erp_token', res.data.token);
-          }
+
+        if (typeof window !== 'undefined' && res.data.token) {
+          window.localStorage.setItem('erp_token', res.data.token);
         }
+
         showToast(`Welcome back, ${loggedUser.name}!`, 'success');
         router.push(loggedUser.role === 'ADMIN' ? '/dashboard' : '/pos');
         return { success: true };
+      } else {
+        const errMsg = res?.message || 'Invalid email or password.';
+        showToast(errMsg, 'error');
+        return { success: false, message: errMsg };
       }
     } catch (err) {
-      // Fallback demo login on connection failure
-      demoLogin('ADMIN');
-      return { success: true };
+      const errMsg = err?.message || 'Unable to connect to server. Please check your credentials.';
+      showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
     }
   };
 
@@ -116,8 +80,8 @@ export function AuthProvider({ children }) {
     } catch (_) {}
 
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('erp_demo_user');
       window.localStorage.removeItem('erp_token');
+      window.localStorage.removeItem('erp_demo_user');
     }
 
     setUser(null);
@@ -132,7 +96,6 @@ export function AuthProvider({ children }) {
         loading,
         isAdmin: user?.role === 'ADMIN',
         login,
-        demoLogin,
         logout,
         refreshUser: checkAuth,
       }}

@@ -2,16 +2,17 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Lock, Mail, ArrowRight, ShieldCheck, ShoppingBag, Zap, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email || !password) return;
     setLoading(true);
     await login(email, password);
     setLoading(false);
@@ -20,54 +21,23 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-100">
-        {/* Brand Logo */}
+        {/* Brand Logo & Header */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 bg-gradient-to-tr from-amber-600 to-amber-400 rounded-2xl flex items-center justify-center text-slate-950 font-black text-2xl shadow-lg shadow-amber-500/20 mb-3">
             <Sparkles className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Royal Oud & Perfumes</h1>
-          <p className="text-xs text-slate-500 mt-1">Enterprise Perfume ERP + POS & Inventory</p>
+          <p className="text-xs text-slate-500 mt-1">Enterprise Perfume ERP, POS & Inventory Management</p>
         </div>
 
-        {/* Quick Demo One-Click Access Banner */}
-        <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200/80 mb-6">
-          <div className="flex items-center justify-center space-x-1.5 text-amber-800 font-bold text-xs uppercase tracking-wider mb-2">
-            <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <span>Instant One-Click Demo Access</span>
-          </div>
-          <p className="text-[11px] text-slate-600 text-center mb-3">
-            Click either role to enter the live perfume system immediately without requiring a database setup.
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => demoLogin('ADMIN')}
-              className="flex items-center justify-center space-x-2 py-3 px-3 bg-white border border-amber-300 hover:border-amber-500 rounded-xl text-xs font-bold text-slate-800 hover:text-amber-800 shadow-sm hover:shadow transition-all group"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
-              <span>Login as Admin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => demoLogin('USER')}
-              className="flex items-center justify-center space-x-2 py-3 px-3 bg-white border border-slate-300 hover:border-slate-500 rounded-xl text-xs font-bold text-slate-800 hover:text-slate-950 shadow-sm hover:shadow transition-all group"
-            >
-              <ShoppingBag className="w-4 h-4 text-slate-600 group-hover:scale-110 transition-transform" />
-              <span>Login as Cashier</span>
-            </button>
-          </div>
+        {/* Authentication Notice */}
+        <div className="flex items-center space-x-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl mb-6 text-xs text-slate-600">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>Enter your authorized administrator or staff credentials to access the terminal.</span>
         </div>
 
-        {/* Traditional Credentials Form */}
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-            Or Sign In with Email
-          </span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        {/* Credentials Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
               Email Address
@@ -76,9 +46,10 @@ export default function LoginPage() {
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@recordsmanager.ae"
+                placeholder="admin@example.com"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium"
               />
             </div>
@@ -92,6 +63,7 @@ export default function LoginPage() {
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               <input
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -109,7 +81,7 @@ export default function LoginPage() {
               <span>Authenticating...</span>
             ) : (
               <>
-                <span>Sign In to POS Terminal</span>
+                <span>Sign In to Terminal</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

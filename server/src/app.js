@@ -47,6 +47,27 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
+// Root and Health Check
+app.get('/', (req, res) => {
+  return res.json({
+    status: 'online',
+    message: 'Perfume ERP & POS Backend API is running successfully',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api',
+    },
+  });
+});
+
+app.get('/health', (req, res) => {
+  return res.json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Mount API routes
 app.use('/api', routes);
 

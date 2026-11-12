@@ -1,7 +1,7 @@
 {
   "name": "records-manager-erp-server",
   "version": "1.0.0",
-  "description": "Stateless Express REST API for Records Manager ERP",
+  "description": "Stateless Express REST API for Perfume ERP + POS",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
@@ -11,6 +11,9 @@
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
+    "bootstrap:admin": "node scripts/bootstrap-admin.js",
+    "db:backup": "node scripts/backup-database.js",
+    "db:clean": "node scripts/clean-database.js",
     "test": "node --test ../tests/unit/*.test.js"
   },
   "dependencies": {
@@ -21,7 +24,6 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "helmet": "^8.0.0",
-    "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "zod": "^3.23.8"
@@ -30,4 +32,3 @@
     "prisma": "^5.22.0"
   }
 }
-

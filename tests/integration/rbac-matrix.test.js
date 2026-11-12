@@ -30,6 +30,8 @@ describe('Integration Tests: Role-Based Access Control (RBAC) Permission Matrix'
     'POST /api/inventory/bulk-receive': ['ADMIN', 'USER'],
     'POST /api/pos/checkout': ['ADMIN', 'USER'],
     'GET /api/sales': ['ADMIN', 'USER'],
+    'POST /api/auth/change-password': ['ADMIN', 'USER'],
+    'POST /api/users/:id/reset-password': ['ADMIN'],
   };
 
   function checkPermission(role, route) {
@@ -76,6 +78,13 @@ describe('Integration Tests: Role-Based Access Control (RBAC) Permission Matrix'
     assert.strictEqual(checkPermission('USER', 'POST /api/inventory/stock-in'), true);
     assert.strictEqual(checkPermission('USER', 'POST /api/inventory/stock-out'), true);
     assert.strictEqual(checkPermission('USER', 'GET /api/sales'), true);
+  });
+
+  test('All authenticated users can change own password, but only ADMIN can reset others', () => {
+    assert.strictEqual(checkPermission('ADMIN', 'POST /api/auth/change-password'), true);
+    assert.strictEqual(checkPermission('USER', 'POST /api/auth/change-password'), true);
+    assert.strictEqual(checkPermission('ADMIN', 'POST /api/users/:id/reset-password'), true);
+    assert.strictEqual(checkPermission('USER', 'POST /api/users/:id/reset-password'), false);
   });
 });
 

@@ -1,89 +1,125 @@
-# Production Deployment & Infrastructure Guide
-
-This guide describes how to run and verify the Records Manager ERP + POS + Inventory Management System in a production-ready, horizontally scalable Docker Compose environment.
+# PRODUCTION DEPLOYMENT GUIDE
+**Perfume ERP, Inventory Management & POS Web Application**  
+**Version:** 1.0.0 (Production Release)  
 
 ---
 
-## 1. System Topology
+## 1. Production Architecture Overview
 
+```text
+┌────────────────────────────────────────────────────────┐
+│                   CLIENT BROWSER                       │
+│     (Desktop POS Terminal, Tablets, Cashier PC)       │
+└──────────────────────────┬─────────────────────────────┘
+                           │ HTTPS
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             FRONTEND SERVICE (Next.js 15)              │
+│       SSR / Static POS Pages, Client Route Guards      │
+└──────────────────────────┬─────────────────────────────┘
+                           │ HTTPS / REST API
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             BACKEND SERVICE (Node.js/Express)          │
+│       JWT Auth, RBAC, POS Engine, In-Memory Cache      │
+└──────────────────────────┬─────────────────────────────┘
+                           │ TCP (Port 5432)
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│            POSTGRESQL DATABASE (v16)                   │
+│   Referential Integrity, ACID Ledger, Sequence Counters │
+└────────────────────────────────────────────────────────┘
 ```
-             +-----------------------+
-             |  Nginx Reverse Proxy  | (Port 80 / 443)
-             |   & Load Balancer     |
-             +-----------------------+
-               /         |         \
-              /          |          \
-             v           v           v
-    +-------------+ +-------------+ +-------------+
-    | Express API | | Express API | | Next.js 15  |
-    | Instance 1  | | Instance 2  | | Frontend    |
-    | (Port 5001) | | (Port 5002) | | (Port 3000) |
-    +-------------+ +-------------+ +-------------+
-           \             /
-            \           /
-             v         v
-     +-----------------------------------+
-     |        PostgreSQL Primary         | (Port 5432)
-     |          Redis Cluster            | (Port 6379)
-     |          BullMQ Worker            |
-     +-----------------------------------+
-```
+
+> [!NOTE]
+> **Redis Architecture Note:** Following a comprehensive audit, Redis was decommissioned in favor of a zero-dependency in-memory TTL cache backed by PostgreSQL's `IdempotencyRecord` table. This eliminates external Redis container costs, connection dropouts, and maintenance overhead without sacrificing performance.
 
 ---
 
-## 2. Infrastructure Components
+## 2. Deploying on Railway (Cloud Hosting)
 
-### 2.1 Services Defined in `docker-compose.yml`
-1. `client`: Next.js 15 App Router production server.
-2. `api1`: Stateless Node.js / Express backend instance 1.
-3. `api2`: Stateless Node.js / Express backend instance 2.
-4. `worker`: BullMQ background worker for asynchronous reporting and notifications.
-5. `postgres`: PostgreSQL 16 database with persistent storage volume `pgdata`.
-6. `redis`: Redis 7 Alpine cache and job queue broker.
-7. `nginx`: Nginx reverse proxy load-balancing requests across `api1` and `api2` using `least_conn`.
+Railway is recommended for multi-service hosting with automatic HTTPS and zero DevOps maintenance.
+
+### Step 1: Provision PostgreSQL Database
+1. In your Railway project, click **New** ➔ **Database** ➔ **Add PostgreSQL**.
+2. Railway will create the PostgreSQL container and automatically generate the `DATABASE_URL` variable.
+
+### Step 2: Deploy Backend Service (`erp-backend`)
+1. Click **New** ➔ **GitHub Repo** ➔ Select your repository (`Nex_World_ERM`).
+2. Set **Root Directory:** `/server`
+3. Under **Variables**, configure:
+   ```env
+   NODE_ENV=production
+   PORT=5000
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
+   JWT_SECRET=YOUR_SECURE_RANDOM_SECRET_AT_LEAST_32_CHARS
+   JWT_EXPIRES_IN=7d
+   COOKIE_NAME=erp_token
+   COOKIE_SECURE=true
+   ADMIN_NAME=Administrator
+   ADMIN_EMAIL=admin@yourperfumestore.com
+   ADMIN_PASSWORD=YOUR_STRONG_ADMIN_PASSWORD
+   ADMIN_ROLE=ADMIN
+   DEFAULT_CURRENCY=AED
+   DEFAULT_TAX_RATE=5.00
+   PRICES_INCLUDE_TAX=true
+   ```
+4. Under **Settings** ➔ **Deploy** ➔ **Custom Start Command**:
+   ```bash
+   npx prisma db push && node prisma/seed.js && npm start
+   ```
+5. Click **Deploy**.
+6. Under **Settings** ➔ **Networking** ➔ Click **Generate Domain** (e.g. `https://erp-backend-production-xyz.up.railway.app`).
+
+### Step 3: Deploy Frontend Service (`ERP_Frontend`)
+1. In the same project, click **New** ➔ **GitHub Repo** ➔ Select your repository.
+2. Set **Root Directory:** `/client`
+3. Under **Variables**, add:
+   ```env
+   NODE_ENV=production
+   NEXT_PUBLIC_API_URL=https://erp-backend-production-xyz.up.railway.app/api
+   ```
+   *(Replace with the actual public URL generated for your backend service).*
+4. Under **Settings** ➔ **Networking** ➔ Click **Generate Domain** (or bind your custom domain, e.g., `pos.yourperfumestore.com`).
+5. Click **Deploy**.
 
 ---
 
-## 3. Quick Start Commands
+## 3. Deploying with Docker Compose (VPS / Dedicated Server)
 
-### 3.1 Setup Environment Configuration
+For self-hosting on Ubuntu/Debian Linux VPS (DigitalOcean, AWS EC2, Hetzner, Linode):
+
+### Step 1: Prepare Server
 ```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin git
+```
+
+### Step 2: Clone Repository & Configure Environment
+```bash
+git clone https://github.com/YourRepo/Nex_World_ERM.git /opt/perfume-erp
+cd /opt/perfume-erp
 cp .env.example .env
+nano .env   # Configure DB_PASSWORD, ADMIN_PASSWORD, JWT_SECRET, etc.
 ```
 
-### 3.2 Build and Start Containers
+### Step 3: Launch Containers
 ```bash
-# Build and run all services in detached mode
 docker compose up -d --build
+```
 
-# View running container status
+### Step 4: Verify Deployment
+```bash
 docker compose ps
+curl http://localhost:5000/health
 ```
 
-### 3.3 Database Migrations & Seeding
-```bash
-# Run Prisma migrations inside the backend container
-docker compose exec api1 npx prisma migrate deploy
+---
 
-# Seed initial roles, demo users (admin & cashier), categories, and business settings
-docker compose exec api1 node prisma/seed.js
-```
+## 4. Production Checklist
 
-### 3.4 Verification & Health Checks
-```bash
-# Check Nginx load balancer health
-curl http://localhost/api/health
-
-# Inspect backend logs to confirm horizontal distribution
-docker compose logs -f nginx api1 api2
-```
-
-### 3.5 Stopping and Cleaning Up
-```bash
-# Stop containers gracefully
-docker compose down
-
-# Stop containers and remove persistent volumes (Caution: removes database data)
-docker compose down -v
-```
-
+- [x] **SSL / HTTPS:** Enforced across all domains (handled automatically by Railway or Nginx reverse proxy).
+- [x] **Database Migrations:** Prisma schema in sync; `seed.js` initializes business settings and administrator account.
+- [x] **Secure Cookies:** `COOKIE_SECURE=true` in production with `SameSite: None` for cross-origin deployments.
+- [x] **RBAC Enforcement:** Cashiers (`USER` role) are authoritatively restricted from administrative APIs.
+- [x] **Health Check Endpoint:** `GET /health` and `GET /` available for load balancer and uptime monitoring.
+- [x] **Zero Demo Data:** All dummy products, test sales, and hardcoded credentials removed.

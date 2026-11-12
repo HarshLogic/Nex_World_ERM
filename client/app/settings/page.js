@@ -40,6 +40,14 @@ export default function SettingsPage() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryFormData, setCategoryFormData] = useState({ name: '', description: '', status: 'ACTIVE' });
 
+  // Security & Password Change State
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+
   // Main System & Perfume ERP Settings State
   const [settings, setSettings] = useState({
     businessName: 'Royal Oud & Perfumes LLC',
@@ -107,6 +115,41 @@ export default function SettingsPage() {
     }
   };
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (!passwordForm.currentPassword || !passwordForm.newPassword) {
+      showToast('Please fill in both current and new password', 'error');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      showToast('New password must be at least 8 characters long', 'error');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showToast('New password and confirmation do not match', 'error');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const res = await api.post('/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (res && res.success) {
+        showToast('Password changed successfully! Keep your new password secure.', 'success');
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        showToast(res?.message || 'Failed to change password', 'error');
+      }
+    } catch (err) {
+      showToast(err?.message || 'Error updating password', 'error');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   // Category Actions
   const handleOpenAddCategory = () => {
     setEditingCategory(null);
@@ -163,6 +206,7 @@ export default function SettingsPage() {
     { id: 'receipt', label: '3. Receipt & Invoice', icon: Receipt },
     { id: 'categories', label: '4. Perfume Categories', icon: Layers },
     { id: 'payment_pos', label: '5. Payment & POS Preferences', icon: CreditCard },
+    { id: 'security', label: '6. Admin & Security', icon: ShieldCheck },
   ];
 
   if (loading) {
@@ -681,6 +725,103 @@ export default function SettingsPage() {
                 onChange={(e) => setSettings({ ...settings, allowNegativeInventory: e.target.checked })}
                 className="w-4 h-4 text-amber-500 rounded"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 6: Admin & Security */}
+      {activeTab === 'security' && (
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex items-center space-x-2 pb-4 border-b border-slate-100">
+            <ShieldCheck className="w-5 h-5 text-amber-600" />
+            <div>
+              <h2 className="font-bold text-sm text-slate-900">Administrator Credentials & Access Security</h2>
+              <p className="text-xs text-slate-500">
+                Manage your administrator password and review server environment authentication settings.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Change Password Card */}
+            <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200">
+              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800 mb-3 flex items-center space-x-1.5">
+                <span>Change Administrator Password</span>
+              </h3>
+              <form onSubmit={handlePasswordChange} className="space-y-3 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    placeholder="Enter current password"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                    New Password * (Min. 8 characters)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    placeholder="Enter strong new password"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    placeholder="Re-enter new password"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold rounded-xl text-xs shadow-sm transition-all disabled:opacity-50 mt-2"
+                >
+                  {changingPassword ? 'Updating Password...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+
+            {/* Security Architecture Information */}
+            <div className="space-y-4 text-xs">
+              <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2">
+                <p className="font-bold text-amber-900">Security Architecture Notes</p>
+                <ul className="list-disc list-inside text-slate-700 space-y-1 text-[11px]">
+                  <li>Passwords are hashed using <strong>bcrypt</strong> (Work Factor 12) with salt.</li>
+                  <li>Initial credentials are read from backend environment variables: <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code>.</li>
+                  <li>Authentication uses signed JWT tokens with HTTP-only cookies and automatic CSRF protection.</li>
+                  <li>To create additional cashiers or shop managers, navigate to the <strong>Employees & Users</strong> module.</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
+                <p className="font-bold text-slate-900 text-[11px]">Authorized Administrative Role</p>
+                <p className="text-slate-600 text-[11px]">
+                  Administrators have full authoritative access over inventory valuation, pricing policies, financial reports, VAT settings, and user privileges.
+                </p>
+              </div>
             </div>
           </div>
         </div>

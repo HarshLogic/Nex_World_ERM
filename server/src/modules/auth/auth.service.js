@@ -105,6 +105,55 @@ class AuthService {
 
     return user;
   }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!currentPassword || !newPassword) {
+      const error = new Error('Current password and new password are required.');
+      error.statusCode = 400;
+      error.code = 'VALIDATION_ERROR';
+      error.isOperational = true;
+      throw error;
+    }
+
+    if (newPassword.length < 8) {
+      const error = new Error('New password must be at least 8 characters long.');
+      error.statusCode = 400;
+      error.code = 'VALIDATION_ERROR';
+      error.isOperational = true;
+      throw error;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      const error = new Error('User not found.');
+      error.statusCode = 404;
+      error.code = 'NOT_FOUND';
+      error.isOperational = true;
+      throw error;
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      const error = new Error('Incorrect current password.');
+      error.statusCode = 401;
+      error.code = 'INVALID_CURRENT_PASSWORD';
+      error.isOperational = true;
+      throw error;
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return { message: 'Password changed successfully.' };
+  }
 }
 
 module.exports = new AuthService();
