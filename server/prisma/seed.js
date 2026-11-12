@@ -1,3 +1,5 @@
+const { execSync } = require('child_process');
+const path = require('path');
 const prisma = require('../src/config/prisma');
 const bootstrapAdmin = require('../scripts/bootstrap-admin');
 
@@ -11,6 +13,23 @@ async function seed() {
   console.log('[SEED] Starting production database seed...');
 
   try {
+    // 0. Verify that tables exist; if not, automatically push schema to database
+    try {
+      await prisma.businessSettings.findFirst();
+    } catch (checkErr) {
+      if (checkErr.code === 'P2021' || (checkErr.message && checkErr.message.includes('does not exist'))) {
+        console.log('[SEED] Database tables do not exist yet. Running prisma db push to synchronize schema...');
+        const schemaPath = path.resolve(__dirname, 'schema.prisma');
+        execSync(`npx prisma db push --schema="${schemaPath}" --skip-generate --accept-data-loss`, {
+          stdio: 'inherit',
+          cwd: path.resolve(__dirname, '..'),
+        });
+        console.log('[SEED] Schema synchronized successfully.');
+      } else {
+        throw checkErr;
+      }
+    }
+
     // 1. Business Settings (AED currency, 5% UAE VAT, Luxury Perfume Store Defaults)
     const settings = await prisma.businessSettings.upsert({
       where: { id: 'default-settings' },
@@ -78,12 +97,22 @@ async function seed() {
     console.log('[SEED] Database seeding successfully completed.');
   } catch (err) {
     console.error('[SEED ERROR]:', err);
-    process.exit(1);
+    // Don't crash container if tables or database is in transitional state
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[SEED WARNING] Non-fatal seed error in production, proceeding with startup.');
+    } else {
+      process.exit(1);
+    }
   }
 }
 
 if (require.main === module) {
-  seed();
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('[SEED FATAL]:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = seed;

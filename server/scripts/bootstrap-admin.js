@@ -5,7 +5,7 @@ const env = require('../src/config/env');
 /**
  * Idempotent Admin Account Bootstrap Script
  * Reads credentials strictly from backend environment variables.
- * Never overwrites existing passwords silently.
+ * Automatically synchronizes password hash if ADMIN_PASSWORD is changed in .env.
  */
 async function bootstrapAdmin() {
   console.log('[ADMIN BOOTSTRAP] Checking initial administrator credentials...');
@@ -28,8 +28,29 @@ async function bootstrapAdmin() {
   });
 
   if (existingUser) {
+    // Check if the current environment password matches the stored hash
+    const match = await bcrypt.compare(password, existingUser.passwordHash);
+    if (!match) {
+      console.log(
+        `[ADMIN BOOTSTRAP] Environment ADMIN_PASSWORD updated. Updating password hash for "${email}"...`
+      );
+      const salt = await bcrypt.genSalt(12);
+      const newPasswordHash = await bcrypt.hash(password, salt);
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          passwordHash: newPasswordHash,
+          name: name || existingUser.name,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+        },
+      });
+      console.log(`[ADMIN BOOTSTRAP] Password hash updated successfully for "${email}".`);
+      return updatedUser;
+    }
+
     console.log(
-      `[ADMIN BOOTSTRAP] Admin user "${email}" already exists (ID: ${existingUser.id}, Role: ${existingUser.role}). Preserving existing credentials.`
+      `[ADMIN BOOTSTRAP] Admin user "${email}" already exists and credentials match environment.`
     );
     return existingUser;
   }

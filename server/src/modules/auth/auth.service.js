@@ -5,9 +5,71 @@ const env = require('../../config/env');
 
 class AuthService {
   async login(email, password, ipAddress, userAgent) {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
+    if (!email || !password) {
+      const error = new Error('Email and password are required.');
+      error.statusCode = 400;
+      error.code = 'VALIDATION_ERROR';
+      error.isOperational = true;
+      throw error;
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const adminEmail = (env.ADMIN_EMAIL || '').toLowerCase().trim();
+    const adminPassword = env.ADMIN_PASSWORD;
+
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      });
+    } catch (dbErr) {
+      console.error('[AUTH DATABASE ERROR]:', dbErr.message);
+      const error = new Error('Database is currently unavailable. Please verify database connection.');
+      error.statusCode = 503;
+      error.code = 'DATABASE_UNAVAILABLE';
+      error.isOperational = true;
+      throw error;
+    }
+
+    // Auto-bootstrap administrator account if matching environment variables and user not found
+    if (!user && adminEmail && cleanEmail === adminEmail && password === adminPassword) {
+      try {
+        console.log(`[AUTH] Auto-bootstrapping administrator account for "${cleanEmail}"...`);
+        const salt = await bcrypt.genSalt(12);
+        const passwordHash = await bcrypt.hash(password, salt);
+        user = await prisma.user.create({
+          data: {
+            name: env.ADMIN_NAME || 'Administrator',
+            email: cleanEmail,
+            passwordHash,
+            role: 'ADMIN',
+            status: 'ACTIVE',
+          },
+        });
+        console.log(`[AUTH] Administrator account created successfully on login for "${cleanEmail}".`);
+      } catch (createErr) {
+        console.error('[AUTH AUTO-BOOTSTRAP ERROR]:', createErr.message);
+      }
+    }
+
+    // If user is admin and ADMIN_PASSWORD in environment was updated, sync password hash
+    if (user && adminEmail && cleanEmail === adminEmail && password === adminPassword) {
+      try {
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+          console.log(`[AUTH] Updating password hash to match updated ADMIN_PASSWORD for "${cleanEmail}"...`);
+          const salt = await bcrypt.genSalt(12);
+          const newPasswordHash = await bcrypt.hash(password, salt);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash: newPasswordHash },
+          });
+          user.passwordHash = newPasswordHash;
+        }
+      } catch (syncErr) {
+        console.error('[AUTH PASSWORD SYNC ERROR]:', syncErr.message);
+      }
+    }
 
     if (!user) {
       const error = new Error('Invalid email or password.');
@@ -46,7 +108,7 @@ class AuthService {
       { expiresIn: env.JWT_EXPIRES_IN }
     );
 
-    // Record session
+    // Record session safely
     try {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       await prisma.session.create({
@@ -83,17 +145,27 @@ class AuthService {
   }
 
   async getCurrentUser(userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        createdAt: true,
-      },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+    } catch (dbErr) {
+      console.error('[AUTH DB ERROR]:', dbErr.message);
+      const error = new Error('Database is currently unavailable. Please verify database connection.');
+      error.statusCode = 503;
+      error.code = 'DATABASE_UNAVAILABLE';
+      error.isOperational = true;
+      throw error;
+    }
 
     if (!user) {
       const error = new Error('User not found.');
@@ -157,4 +229,3 @@ class AuthService {
 }
 
 module.exports = new AuthService();
-
