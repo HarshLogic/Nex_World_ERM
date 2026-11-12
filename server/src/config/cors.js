@@ -57,6 +57,7 @@ const corsOptions = {
     console.warn(`[CORS REJECTED]: Origin "${origin}" not in allowed origins list.`);
     return callback(new Error(`CORS Error: Origin ${origin} is not allowed`));
   },
+
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
