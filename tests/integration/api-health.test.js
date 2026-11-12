@@ -42,6 +42,16 @@ describe('Integration Tests: Production Server Health & Security Endpoints', () 
     assert.ok(body.timestamp);
   });
 
+  test('GET /api returns 200 and available endpoints index', async () => {
+    const res = await fetch(`${baseUrl}/api`);
+    assert.strictEqual(res.status, 200);
+    const body = await res.json();
+    assert.strictEqual(body.success, true);
+    assert.ok(body.endpoints);
+    assert.strictEqual(body.endpoints.health, '/api/health');
+    assert.strictEqual(body.endpoints.auth, '/api/auth');
+  });
+
   test('POST /api/auth/login rejects empty credentials with 400', async () => {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',

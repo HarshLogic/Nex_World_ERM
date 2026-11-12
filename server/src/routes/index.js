@@ -18,7 +18,33 @@ const activityLogsRoutes = require('../modules/activity-logs/activityLogs.routes
 const notificationsRoutes = require('../modules/notifications/notifications.routes');
 const dashboardRoutes = require('../modules/dashboard/dashboard.routes');
 
-// Health Check Endpoint (used by Nginx and Docker)
+// API Root & Health Check Endpoints
+router.get('/', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'Perfume ERP & POS REST API v1.0.0 is running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      products: '/api/products',
+      categories: '/api/categories',
+      inventory: '/api/inventory',
+      pos: '/api/pos',
+      sales: '/api/sales',
+      returns: '/api/returns',
+      customers: '/api/customers',
+      suppliers: '/api/suppliers',
+      purchases: '/api/purchase-orders',
+      expenses: '/api/expenses',
+      users: '/api/users',
+      settings: '/api/settings',
+      activityLogs: '/api/activity-logs',
+      notifications: '/api/notifications',
+      dashboard: '/api/dashboard',
+    },
+  });
+});
+
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
