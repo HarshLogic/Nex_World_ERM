@@ -6,6 +6,8 @@ dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000', 10),
@@ -13,13 +15,18 @@ const env = {
     process.env.DATABASE_URL ||
     'postgresql://erp_user:erp_secure_password_123@localhost:5432/erp_records_db?schema=public',
 
+  // CORS Allowed Origins (Comma-separated list or single URL)
+  CORS_ORIGIN:
+    process.env.CORS_ORIGIN ||
+    'https://nexperfumeerp.up.railway.app,http://localhost:3000',
+
   // JWT Secrets & Security
   JWT_SECRET:
     process.env.JWT_SECRET ||
     'super_secret_jwt_signing_key_change_in_production_min_32_chars',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   COOKIE_NAME: process.env.COOKIE_NAME || 'erp_token',
-  COOKIE_SECURE: process.env.COOKIE_SECURE === 'true',
+  COOKIE_SECURE: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProduction,
 
   // Business Defaults
   DEFAULT_CURRENCY: process.env.DEFAULT_CURRENCY || 'AED',

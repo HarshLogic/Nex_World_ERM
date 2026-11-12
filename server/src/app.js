@@ -4,38 +4,22 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
+const { corsOptions } = require('./config/cors');
 const routes = require('./routes');
 const { errorHandler } = require('./middleware/error.middleware');
 const { sendError } = require('./utils/response.util');
 
 const app = express();
 
-// Security and standard middlewares
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-}));
+// 1. Production CORS Middleware MUST be registered first
+// Handles all origins, allowed methods/headers, and preflight OPTIONS requests
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
+// 2. Helmet Security Headers (crossOriginResourcePolicy: false for cross-domain API access)
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-      if (!origin) return callback(null, true);
-      const configuredOrigins = process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-        : ['http://localhost:3000'];
-
-      if (
-        process.env.CORS_ORIGIN === '*' ||
-        configuredOrigins.includes(origin) ||
-        origin.endsWith('.railway.app') ||
-        origin.endsWith('.vercel.app') ||
-        origin.includes('localhost')
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
+  helmet({
+    crossOriginResourcePolicy: false,
   })
 );
 
@@ -47,7 +31,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Root and Health Check
+// Root & Health Check Endpoints
 app.get('/', (req, res) => {
   return res.json({
     status: 'online',
@@ -76,8 +60,7 @@ app.use((req, res) => {
   return sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404, 'NOT_FOUND');
 });
 
-// Centralized Error Handler
+// Centralized Error Handler (Retains CORS headers on error responses)
 app.use(errorHandler);
 
 module.exports = app;
-
