@@ -1,3 +1,5 @@
+const { execSync } = require('child_process');
+const path = require('path');
 const bcrypt = require('bcrypt');
 const prisma = require('../src/config/prisma');
 const env = require('../src/config/env');
@@ -5,7 +7,8 @@ const env = require('../src/config/env');
 /**
  * Idempotent Admin Account Bootstrap Script
  * Reads credentials strictly from backend environment variables.
- * Automatically synchronizes password hash if ADMIN_PASSWORD is changed in .env.
+ * Automatically pushes schema if tables are missing, and synchronizes
+ * password hash if ADMIN_PASSWORD is changed in .env.
  */
 async function bootstrapAdmin() {
   console.log('[ADMIN BOOTSTRAP] Checking initial administrator credentials...');
@@ -22,10 +25,33 @@ async function bootstrapAdmin() {
     );
   }
 
-  // 2. Check if admin account already exists
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-  });
+  // 2. Check if admin account already exists (Auto-create schema if missing)
+  let existingUser;
+  try {
+    existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+  } catch (err) {
+    if (err.code === 'P2021' || (err.message && err.message.includes('does not exist'))) {
+      console.log('[ADMIN BOOTSTRAP] Database tables missing. Running prisma db push to synchronize schema...');
+      try {
+        const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
+        execSync(`npx prisma db push --schema="${schemaPath}" --skip-generate --accept-data-loss`, {
+          stdio: 'inherit',
+          cwd: path.resolve(__dirname, '..'),
+        });
+        console.log('[ADMIN BOOTSTRAP] Schema synchronized successfully.');
+        existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+      } catch (pushErr) {
+        console.error('[ADMIN BOOTSTRAP DB PUSH ERROR]:', pushErr.message);
+        throw pushErr;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   if (existingUser) {
     // Check if the current environment password matches the stored hash
