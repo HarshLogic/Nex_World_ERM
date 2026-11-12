@@ -6,10 +6,11 @@
   "type": "commonjs",
   "scripts": {
     "build": "npx prisma generate",
-    "start": "node src/server.js",
+    "start": "npx prisma db push --skip-generate --accept-data-loss && node prisma/seed.js && node src/server.js",
     "dev": "node --watch src/server.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
+    "prisma:deploy": "npx prisma db push --skip-generate --accept-data-loss && node prisma/seed.js",
     "prisma:seed": "node prisma/seed.js",
     "bootstrap:admin": "node scripts/bootstrap-admin.js",
     "db:backup": "node scripts/backup-database.js",
