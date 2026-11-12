@@ -7,7 +7,7 @@ function getApiBaseUrl() {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host.endsWith('.railway.app') || host === 'nexperfumeerp.up.railway.app') {
-      return 'https://erp-backend-production-c612ea0b.up.railway.app/api';
+      return 'https://erp-backend-production-654aeb0e.up.railway.app/api';
     }
   }
 
